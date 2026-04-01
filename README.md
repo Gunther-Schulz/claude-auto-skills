@@ -89,6 +89,10 @@ List requirements before coding, check consumers before modifying interfaces, tr
 Challenge proposals before agreeing — state concerns, alternatives, or unstated assumptions. Full rules: `/critical-evaluation`
 ```
 
+## Effectiveness caveat
+
+There is no way to prove these skills improve Claude's output quality. The skills force Claude to produce visible markers (📋, ✅, ⚖️) that make its verification steps auditable, but whether that changes actual thoroughness vs just documenting what it would have done anyway is unknown. The only reliable signal is your correction frequency over time — if you stop catching "you forgot to update X" mistakes, the skills are working. If the same mistakes persist, they're cosmetics.
+
 ## Roadmap
 
 - **Classifier accuracy tuning**: Output filter rejects hallucinated responses. Transcript context helps disambiguate short prompts ("yes" after "shall I implement?" → code-quality). 89% accuracy on test battery. Ongoing: refine based on `classifier.log` analysis.
