@@ -60,6 +60,23 @@ CLASSIFIER_EFFORT="low"
 CLASSIFIER_MAX_BUDGET=""
 ```
 
+### claude-worktime statusline integration (optional)
+
+If you use [claude-worktime](https://github.com/Gunther-Schulz/claude-worktime), add to `~/.config/claude-worktime/config.sh`:
+
+```bash
+# Auto-skills status (shows skills:on or skills:off)
+_skills_conf="${CLAUDE_SKILLS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/claude-skills}/config.sh"
+_skills_enabled="off"
+if [ -f "$_skills_conf" ]; then
+    _skills_enabled="on"
+    source "$_skills_conf" 2>/dev/null
+    [ "${CLASSIFIER_ENABLED:-true}" != "true" ] && _skills_enabled="off"
+fi
+GROUP_AUTOSKILLS="skills:${_skills_enabled}"
+STATUSLINE_3="MODEL RATE_5H RATE_7D CONTEXT AUTOSKILLS"
+```
+
 ## Updating
 
 ```bash
