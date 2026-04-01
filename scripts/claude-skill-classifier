@@ -150,7 +150,11 @@ VALID = {
 if result:
     lines = []
     for l in result.splitlines():
+        # Strip list markers, arrows, and category prefixes Haiku sometimes adds
         cleaned = l.strip().lstrip('-*•→ ').strip()
+        for prefix in ('code-quality: ', 'critical-thinking: ', 'critical-evaluation: '):
+            if cleaned.lower().startswith(prefix):
+                cleaned = cleaned[len(prefix):].strip()
         if cleaned in VALID:
             lines.append(cleaned)
     if lines:
