@@ -73,7 +73,7 @@ if [ -f "$_skills_conf" ]; then
     source "$_skills_conf" 2>/dev/null
     [ "${CLASSIFIER_ENABLED:-true}" != "true" ] && _skills_enabled="off"
 fi
-GROUP_AUTOSKILLS="skills:${_skills_enabled}"
+GROUP_AUTOSKILLS="auto-skills:${_skills_enabled}"
 STATUSLINE_3="MODEL RATE_5H RATE_7D CONTEXT AUTOSKILLS"
 ```
 
