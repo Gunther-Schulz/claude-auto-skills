@@ -44,59 +44,43 @@ Logs cost, duration, and token counts per classification to `~/.local/state/clau
 | Artifact | Location |
 |----------|----------|
 | Plugin | `~/.claude/plugins/cache/local/auto-skills/` (managed by Claude Code) |
-| Config | `~/.config/claude-auto-skills/config.sh` |
+| Config | `.claude/auto-skills.local.md` (project) or `~/.claude/auto-skills.local.md` (global) |
 | Logs | `~/.local/state/claude-auto-skills/` |
-
-Config and logs follow the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/) and can be overridden with `CLAUDE_AUTO_SKILLS_CONFIG` and `CLAUDE_AUTO_SKILLS_STATE`.
 
 ## Configuration
 
-Edit `~/.config/claude-auto-skills/config.sh`:
+Edit `~/.claude/auto-skills.local.md` (global) or `.claude/auto-skills.local.md` (per-project override):
 
-```bash
-# Enable/disable the classifier (default: true)
-# Skills remain available manually via /auto-skills:code-quality etc. when disabled
-CLASSIFIER_ENABLED=true
+```yaml
+---
+enabled: true
+sensitivity: normal    # low | normal | high
+model: claude-haiku-4-5-20251001
+effort: low
+debug_logger: false    # enable hook input debug logging
 
-# Classifier model (default: claude-haiku-4-5-20251001)
-CLASSIFIER_MODEL="claude-haiku-4-5-20251001"
-
-# Effort level for classifier (default: low)
-CLASSIFIER_EFFORT="low"
-
-# Max budget per classification call in USD (default: no limit)
-CLASSIFIER_MAX_BUDGET=""
-
-# Sensitivity: low, normal, high (default: normal)
-# low:    Only trigger on explicit action keywords
-# normal: Balanced — skips confirmations, discussions, git ops
-# high:   Trigger on anything plausible
-CLASSIFIER_SENSITIVITY="normal"
+# Category definitions — add custom skills by adding entries here
+categories:
+  - name: code-quality
+    match: "User is asking to WRITE, EDIT, CREATE, or IMPLEMENT code."
+    action: "Run /auto-skills:code-quality before writing code."
+  - name: critical-thinking
+    match: "User is asking to INVESTIGATE, DEBUG, TRACE, or ANALYZE something."
+    action: "Run /auto-skills:critical-thinking before proceeding."
+  - name: critical-evaluation
+    match: "User is asking to EVALUATE, COMPARE, CHOOSE, or DECIDE between options."
+    action: "Run /auto-skills:critical-evaluation before responding."
+  - name: skill-design
+    match: "User is asking to WRITE, UPDATE, DESIGN, or REVIEW a skill or prompt template."
+    action: "Run /auto-skills:skill-design before writing or modifying skills."
+---
 ```
 
-### claude-worktime statusline integration (optional)
+### Adding custom skills
 
-If you use [claude-worktime](https://github.com/Gunther-Schulz/claude-worktime), add to `~/.config/claude-worktime/config.sh`:
-
-```bash
-# Auto-skills status (grey label, green "on" / grey "off")
-_skills_conf="${CLAUDE_AUTO_SKILLS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/claude-auto-skills}/config.sh"
-_skills_enabled="off"
-if [ -f "$_skills_conf" ]; then
-    _skills_enabled="on"
-    source "$_skills_conf" 2>/dev/null
-    [ "${CLASSIFIER_ENABLED:-true}" != "true" ] && _skills_enabled="off"
-fi
-_gray=$'\033[38;5;246m'; _green=$'\033[32m'; _reset=$'\033[0m'
-if [ "$_skills_enabled" = "on" ]; then
-    _mode="${CLASSIFIER_SENSITIVITY:-normal}"
-    GROUP_AUTOSKILLS="${_gray}auto-skills:${_reset}${_green}on(${_mode})${_reset}"
-else
-    GROUP_AUTOSKILLS="${_gray}auto-skills:off${_reset}"
-fi
-GROUP_AUTOSKILLS_COLOR="none"  # requires claude-worktime v97e5788+ for "none" support
-STATUSLINE_3="MODEL RATE_5H RATE_7D CONTEXT AUTOSKILLS"
-```
+1. Add a category entry to the `categories` list in your config
+2. Create a corresponding `SKILL.md` in your project's `.claude/skills/` directory
+3. The classifier will now route matching prompts to your skill
 
 ## Management
 
