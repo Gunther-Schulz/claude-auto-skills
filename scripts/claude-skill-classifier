@@ -141,7 +141,7 @@ _CATEGORIES = """CATEGORIES (output the line after the arrow if the category mat
 - critical-thinking: User is asking to INVESTIGATE, DEBUG, TRACE, or ANALYZE something — find a bug, understand behavior, research a question, explain code.
   → Run /critical-thinking before proceeding.
 
-- critical-evaluation: User is asking to EVALUATE, REVIEW, or CRITIQUE a specific proposal, design, PR, or approach — not general discussion.
+- critical-evaluation: User is asking to EVALUATE, COMPARE, CHOOSE, or DECIDE between options, or asking for an opinion on a design, approach, or tradeoff. Includes "should we use X or Y?", "is X the right choice?", "what do you think about X?".
   → Run /critical-evaluation before responding."""
 
 _low_keywords = config["CLASSIFIER_LOW_KEYWORDS"]
@@ -155,8 +155,8 @@ _DO_NOT_MATCH_NORMAL = """DO NOT MATCH (output nothing for these):
 - Requests to continue or deepen discussion: "lets think more", "another round", "keep going"
 - Conversational or meta messages: greetings, feedback about the tool, topic changes
 - Git operations: "commit this", "push", "create a PR"
-- Design DISCUSSIONS (talking about how something should work without asking to write code)
-- Asking to UPDATE documentation or planning files (roadmaps, notes) — this is not code"""
+- Asking to UPDATE documentation or planning files (roadmaps, notes) — this is not code
+- NOTE: "should we use X?" and "what do you think about X?" are NOT discussions — they are evaluation requests, match critical-evaluation"""
 
 _DO_NOT_MATCH_HIGH = """DO NOT MATCH (output nothing for these — be generous, match anything plausible):
 - Only skip pure confirmations ("yes", "ok"), greetings, and git operations ("commit", "push")
