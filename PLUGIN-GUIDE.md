@@ -176,6 +176,15 @@ Inside Claude Code:
 /reload-plugins
 ```
 
+Or automate from the shell using Claude Code's CLI:
+
+```bash
+claude plugin marketplace add owner/repo
+claude plugin install my-plugin@my-marketplace
+```
+
+This allows install.sh scripts to handle the full setup without manual `/plugin` commands.
+
 The marketplace name comes from the `name` field in `marketplace.json`. The plugin name comes from the `name` field in the plugin entry.
 
 ### Updating after changes

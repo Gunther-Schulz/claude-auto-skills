@@ -17,22 +17,15 @@ Claude Code follows instructions but doesn't consistently self-check. It can ski
 
 ## Installation
 
-1. Run the setup script (handles migration from older installs and copies config):
-
 ```bash
 git clone https://github.com/Gunther-Schulz/claude-auto-skills.git
 cd claude-auto-skills
 ./install.sh
 ```
 
-2. Inside Claude Code, add the marketplace and install the plugin:
+This handles everything: config setup, migration from older installs, marketplace registration, and plugin installation via the `claude` CLI.
 
-```
-/plugin marketplace add Gunther-Schulz/claude-auto-skills
-/plugin install auto-skills@local
-```
-
-3. Restart Claude Code or run `/reload-plugins`.
+Restart Claude Code or run `/reload-plugins` to activate.
 
 ### What the plugin provides
 
