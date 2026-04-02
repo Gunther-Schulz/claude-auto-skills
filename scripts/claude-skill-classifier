@@ -1,107 +1,135 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/env python3
+"""Classifier hook for claude-auto-skills.
+
+Reads UserPromptSubmit hook JSON from stdin, classifies the prompt using
+claude -p with Haiku, and outputs the matching skill reminder to stdout
+(injected as system-reminder by Claude Code).
+"""
+
+import json
+import os
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
 
 # Recursion guard: claude -p triggers UserPromptSubmit hooks too
-if [ "${CLAUDE_SKILL_CLASSIFYING:-}" = "1" ]; then
-    exit 0
-fi
-export CLAUDE_SKILL_CLASSIFYING=1
+if os.environ.get("CLAUDE_SKILL_CLASSIFYING") == "1":
+    sys.exit(0)
+os.environ["CLAUDE_SKILL_CLASSIFYING"] = "1"
 
 # Paths: env vars > XDG spec > defaults
-CONFIGDIR="${CLAUDE_AUTO_SKILLS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/claude-auto-skills}"
-STATEDIR="${CLAUDE_AUTO_SKILLS_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/claude-auto-skills}"
-CONFIGFILE="${CONFIGDIR}/config.sh"
-LOG_FILE="${STATEDIR}/classifier.log"
+config_dir = Path(
+    os.environ.get("CLAUDE_AUTO_SKILLS_CONFIG")
+    or os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "claude-auto-skills")
+)
+state_dir = Path(
+    os.environ.get("CLAUDE_AUTO_SKILLS_STATE")
+    or os.path.join(os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state")), "claude-auto-skills")
+)
+config_file = config_dir / "config.sh"
+state_dir.mkdir(parents=True, exist_ok=True)
+log_file = state_dir / "classifier.log"
 
-# --- Defaults (overridden by config.sh) ---
-CLASSIFIER_ENABLED=true
-CLASSIFIER_MODEL="claude-haiku-4-5-20251001"
-CLASSIFIER_EFFORT="low"
-CLASSIFIER_MAX_BUDGET=""
+# Defaults
+config = {
+    "CLASSIFIER_ENABLED": "true",
+    "CLASSIFIER_MODEL": "claude-haiku-4-5-20251001",
+    "CLASSIFIER_EFFORT": "low",
+    "CLASSIFIER_MAX_BUDGET": "",
+}
 
-# Source user config
-[ -f "$CONFIGFILE" ] && source "$CONFIGFILE"
+# Source config (parse bash-style KEY=VALUE)
+if config_file.exists():
+    for line in config_file.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" in line:
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip("'\"")
+            if key in config:
+                config[key] = value
 
-# Disabled check (after sourcing config)
-[ "$CLASSIFIER_ENABLED" != "true" ] && exit 0
+if config["CLASSIFIER_ENABLED"] != "true":
+    sys.exit(0)
 
-# Ensure state dir exists
-mkdir -p "$STATEDIR"
 
-INPUT=$(cat)
+def log(msg: str) -> None:
+    ts = datetime.now().astimezone().isoformat(timespec="seconds")
+    try:
+        with open(log_file, "a") as f:
+            f.write(f"{ts} | {msg}\n")
+    except OSError:
+        pass
 
-# Extract user prompt and transcript path from hook JSON
-eval "$(echo "$INPUT" | python3 -c "
-import sys, json, shlex
+
+# Read hook JSON from stdin
 try:
-    data = json.load(sys.stdin)
-    print(f'PROMPT={shlex.quote(data.get(\"prompt\", \"\"))}')
-    print(f'TRANSCRIPT_PATH={shlex.quote(data.get(\"transcript_path\", \"\"))}')
-except:
-    print('PROMPT=\"\"')
-    print('TRANSCRIPT_PATH=\"\"')
-" 2>/dev/null)"
+    hook_input = json.load(sys.stdin)
+except (json.JSONDecodeError, ValueError):
+    log("ERROR | failed to parse hook stdin JSON")
+    sys.exit(0)
 
-if [ -z "$PROMPT" ]; then
-    echo "$(date -Is) | NO_INPUT" >> "$LOG_FILE"
-    exit 0
-fi
+prompt = hook_input.get("prompt", "")
+transcript_path = hook_input.get("transcript_path", "")
+
+if not prompt:
+    log("NO_INPUT")
+    sys.exit(0)
 
 # Extract last assistant text from transcript for context
-CONTEXT=""
-if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-    CONTEXT=$(python3 -c "
-import json, sys
-try:
-    last_text = ''
-    with open(sys.argv[1], 'r') as f:
-        for line in f:
-            try:
-                entry = json.loads(line.strip())
-                if entry.get('type') != 'assistant':
+context = ""
+if transcript_path and os.path.isfile(transcript_path):
+    try:
+        last_text = ""
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                try:
+                    entry = json.loads(line.strip())
+                    if entry.get("type") != "assistant":
+                        continue
+                    content = entry.get("message", {}).get("content", [])
+                    if not isinstance(content, list):
+                        continue
+                    texts = [
+                        b.get("text", "")
+                        for b in content
+                        if isinstance(b, dict) and b.get("type") == "text" and b.get("text", "").strip()
+                    ]
+                    if texts:
+                        last_text = texts[-1]
+                except (json.JSONDecodeError, KeyError):
                     continue
-                content = entry.get('message', {}).get('content', [])
-                if not isinstance(content, list):
-                    continue
-                texts = [b.get('text', '') for b in content
-                         if isinstance(b, dict) and b.get('type') == 'text' and b.get('text', '').strip()]
-                if texts:
-                    last_text = texts[-1]
-            except (json.JSONDecodeError, KeyError):
-                continue
-    # Take the last 300 chars
-    if len(last_text) > 300:
-        last_text = last_text[-300:]
-    print(last_text)
-except Exception:
-    pass
-" "$TRANSCRIPT_PATH" 2>/dev/null || true)
-fi
+        if last_text:
+            context = last_text[-300:]
+    except OSError:
+        pass
 
-export LOG_FILE
-export CLASSIFIER_PROMPT="$PROMPT"
+log(
+    f"DEBUG | transcript_path={transcript_path or '(empty)'} | "
+    f"context_len={len(context)} | context_preview={context[:60]} | "
+    f"prompt_len={len(prompt)} | prompt={prompt[:60]}"
+)
 
-# Debug: log full diagnostic info for tracing
-echo "$(date -Is) | DEBUG | transcript_path=${TRANSCRIPT_PATH:-(empty)} | context_len=${#CONTEXT} | context_preview=${CONTEXT:0:60} | prompt_len=${#PROMPT} | prompt=${PROMPT:0:60}" >> "$LOG_FILE"
+# Build classifier input
+if context:
+    classifier_input = f"[Last assistant message (truncated)]:\n{context}\n\n[User message to classify]:\n{prompt}"
+else:
+    classifier_input = f"[User message to classify]:\n{prompt}"
 
-# Build classifier input with context
-if [ -n "$CONTEXT" ]; then
-    CLASSIFIER_INPUT="[Last assistant message (truncated)]:
-$CONTEXT
+# Build claude -p command
+cmd = [
+    "claude", "-p",
+    "--model", config["CLASSIFIER_MODEL"],
+    "--effort", config["CLASSIFIER_EFFORT"],
+    "--output-format", "json",
+]
+if config["CLASSIFIER_MAX_BUDGET"]:
+    cmd.extend(["--max-budget-usd", config["CLASSIFIER_MAX_BUDGET"]])
 
-[User message to classify]:
-$PROMPT"
-else
-    CLASSIFIER_INPUT="[User message to classify]:
-$PROMPT"
-fi
-
-# Build claude -p arguments
-CLAUDE_ARGS=(--model "$CLASSIFIER_MODEL" --effort "$CLASSIFIER_EFFORT" --output-format json)
-[ -n "$CLASSIFIER_MAX_BUDGET" ] && CLAUDE_ARGS+=(--max-budget-usd "$CLASSIFIER_MAX_BUDGET")
-
-# Classify using claude CLI
-RAW=$(echo "$CLASSIFIER_INPUT" | claude -p "${CLAUDE_ARGS[@]}" 'Classify the user message. Output ONLY matching lines exactly as shown. If none match, output nothing.
+SYSTEM_PROMPT = """Classify the user message. Output ONLY matching lines exactly as shown. If none match, output nothing.
 
 CATEGORIES (output the line after the arrow if the category matches):
 
@@ -123,54 +151,61 @@ DO NOT MATCH (output nothing for these):
 - Design DISCUSSIONS (talking about how something should work without asking to write code)
 - Asking to UPDATE documentation or planning files (roadmaps, notes) — this is not code
 
-Use the assistant context (if provided) to disambiguate short messages. "yes" after "shall I implement?" is code-quality. "yes" after "want another design round?" is no match.' 2>/dev/null || true)
+Use the assistant context (if provided) to disambiguate short messages. "yes" after "shall I implement?" is code-quality. "yes" after "want another design round?" is no match."""
 
-# Check if claude -p failed entirely
-if [ -z "$RAW" ]; then
-    echo "$(date -Is) | ERROR | claude -p returned empty | prompt=${PROMPT:0:60}" >> "$LOG_FILE"
-    exit 0
-fi
+cmd.append(SYSTEM_PROMPT)
 
-# Parse JSON, log, filter, and output (printf preserves literal \n in JSON)
-printf '%s\n' "$RAW" | python3 -c "
-import sys, json, os
-from datetime import datetime
-
-log_file = os.environ.get('LOG_FILE', '')
-prompt = os.environ.get('CLASSIFIER_PROMPT', '')[:80]
-ts = datetime.now().astimezone().isoformat(timespec='seconds')
-
+# Run classifier
 try:
-    data = json.load(sys.stdin)
-    result = data.get('result', '').strip()
-    cost = data.get('total_cost_usd', 0)
-    api_ms = data.get('duration_api_ms', 0)
-    total_ms = data.get('duration_ms', 0)
-    tokens_in = data.get('usage', {}).get('input_tokens', 0)
-    tokens_out = data.get('usage', {}).get('output_tokens', 0)
-except Exception as e:
-    with open(log_file, 'a') as f:
-        f.write(f'{ts} | ERROR | json parse failed: {e} | prompt={prompt}\n')
+    result = subprocess.run(
+        cmd,
+        input=classifier_input,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    raw_output = result.stdout
+except subprocess.TimeoutExpired:
+    log(f"ERROR | claude -p timed out | prompt={prompt[:60]}")
+    sys.exit(0)
+except OSError as e:
+    log(f"ERROR | claude -p failed to start: {e} | prompt={prompt[:60]}")
     sys.exit(0)
 
-# Filter: only allow expected lines (reject hallucinated responses)
+if not raw_output:
+    log(f"ERROR | claude -p returned empty | prompt={prompt[:60]}")
+    sys.exit(0)
+
+# Parse JSON result
+try:
+    data = json.loads(raw_output)
+    classification = data.get("result", "").strip()
+    cost = data.get("total_cost_usd", 0)
+    api_ms = data.get("duration_api_ms", 0)
+    total_ms = data.get("duration_ms", 0)
+    tokens_in = data.get("usage", {}).get("input_tokens", 0)
+    tokens_out = data.get("usage", {}).get("output_tokens", 0)
+except (json.JSONDecodeError, ValueError) as e:
+    log(f"ERROR | json parse failed: {e} | raw={raw_output[:100]} | prompt={prompt[:60]}")
+    sys.exit(0)
+
+# Filter: only allow expected lines
 VALID = {
-    'Run /code-quality before writing code.',
-    'Run /critical-thinking before proceeding.',
-    'Run /critical-evaluation before responding.',
+    "Run /code-quality before writing code.",
+    "Run /critical-thinking before proceeding.",
+    "Run /critical-evaluation before responding.",
 }
-# Map bare category names to full lines (Haiku sometimes returns just the name)
 CATEGORY_MAP = {
-    'code-quality': 'Run /code-quality before writing code.',
-    'critical-thinking': 'Run /critical-thinking before proceeding.',
-    'critical-evaluation': 'Run /critical-evaluation before responding.',
+    "code-quality": "Run /code-quality before writing code.",
+    "critical-thinking": "Run /critical-thinking before proceeding.",
+    "critical-evaluation": "Run /critical-evaluation before responding.",
 }
+
 filtered = []
-if result:
-    for l in result.splitlines():
-        cleaned = l.strip().lstrip('-*•→ ').strip()
-        # Strip category prefixes (e.g. "code-quality: Run /code-quality...")
-        for prefix in ('code-quality: ', 'critical-thinking: ', 'critical-evaluation: '):
+if classification:
+    for line in classification.splitlines():
+        cleaned = line.strip().lstrip("-*•→ ").strip()
+        for prefix in ("code-quality: ", "critical-thinking: ", "critical-evaluation: "):
             if cleaned.lower().startswith(prefix):
                 cleaned = cleaned[len(prefix):].strip()
         if cleaned in VALID:
@@ -178,15 +213,11 @@ if result:
         elif cleaned.lower() in CATEGORY_MAP:
             filtered.append(CATEGORY_MAP[cleaned.lower()])
 
-# Log: raw result + filtered result + cost/duration
-raw_label = result.replace(chr(10), ' | ')[:120] if result else 'EMPTY'
-filtered_label = ' | '.join(filtered) if filtered else '(filtered out)'
-with open(log_file, 'a') as f:
-    f.write(f'{ts} | raw={raw_label} | filtered={filtered_label} | \${cost:.6f} {api_ms}ms/{total_ms}ms {tokens_in}in+{tokens_out}out | {prompt}\n')
+# Log
+raw_label = classification.replace("\n", " | ")[:120] if classification else "EMPTY"
+filtered_label = " | ".join(filtered) if filtered else "(filtered out)"
+log(f"raw={raw_label} | filtered={filtered_label} | ${cost:.6f} {api_ms}ms/{total_ms}ms {tokens_in}in+{tokens_out}out | {prompt[:80]}")
 
-# Output filtered result to stdout (injected as system-reminder)
+# Output to stdout (injected as system-reminder)
 if filtered:
-    print(chr(10).join(filtered))
-" 2>/dev/null
-
-exit 0
+    print("\n".join(filtered))
