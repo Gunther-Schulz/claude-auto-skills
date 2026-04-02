@@ -144,7 +144,7 @@ if config["CLASSIFIER_MAX_BUDGET"]:
 
 _CATEGORIES = """CATEGORIES (output the line after the arrow if the category matches):
 
-- code-quality: User is asking to WRITE, EDIT, CREATE, or IMPLEMENT code — new features, bug fixes, refactoring, file creation. Confirming a proposal to implement counts.
+- code-quality: User is asking to WRITE, EDIT, CREATE, or IMPLEMENT code — new features, bug fixes, refactoring, file creation. Confirming a proposal to implement counts. Also matches DESIGN CONSTRAINTS directed at code being written: "make it configurable", "don't hardcode that", "use an env var", "add a config option", "that should be a parameter".
   → Run /code-quality before writing code.
 
 - critical-thinking: User is asking to INVESTIGATE, DEBUG, TRACE, or ANALYZE something — find a bug, understand behavior, research a question, explain code.
