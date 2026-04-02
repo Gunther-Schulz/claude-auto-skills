@@ -1,7 +1,7 @@
 {
   "name": "auto-skills",
   "version": "1.0.0",
-  "description": "Automatic skill injection via Haiku classifier hook. Injects code-quality, critical-thinking, critical-evaluation, and skill-design checklists based on the user's prompt.",
+  "description": "Quality checklists for Claude Code — code-quality, critical-thinking, critical-evaluation, and skill-design skills auto-discovered based on task context.",
   "author": {
     "name": "Gunther Schulz"
   },
