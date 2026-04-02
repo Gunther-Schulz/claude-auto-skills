@@ -53,8 +53,7 @@ if command -v jq &>/dev/null; then
           )
         ]
       else . end |
-      del(.extraKnownMarketplaces["local"]) |
-      del(.enabledPlugins["auto-skills@local"])
+      del(.extraKnownMarketplaces["local"])
     ' "$SETTINGS" > "${SETTINGS}.tmp" && mv "${SETTINGS}.tmp" "$SETTINGS"
     echo -e "  ${GREEN}cleaned${NC}    old hook/plugin entries from settings.json"
 fi
