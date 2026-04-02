@@ -50,7 +50,7 @@ echo ""
 # entries (claude-skill-classifier / claude-hook-logger) that were used before
 # the plugin approach — the plugin's hooks/hooks.json replaces them.
 jq --arg path "$SCRIPT_DIR" '
-  .extraKnownMarketplaces["local"] = {"source": "directory", "path": $path} |
+  .extraKnownMarketplaces["local"] = {"source": {"source": "directory", "path": $path}} |
   .enabledPlugins["claude-auto-skills@local"] = true |
   if .hooks.UserPromptSubmit then
     .hooks.UserPromptSubmit = [
