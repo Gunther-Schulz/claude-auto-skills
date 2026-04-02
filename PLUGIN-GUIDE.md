@@ -241,3 +241,5 @@ After installing or reinstalling a plugin, `/reload-plugins` loads the new skill
 | Changed plugin on GitHub but not reinstalled | Old behavior persists | `marketplace update` + uninstall + reinstall |
 | `directory` source in `extraKnownMarketplaces` | `owner: expected object, received undefined` on install | Use GitHub source (`/plugin marketplace add owner/repo`) instead |
 | `enabledPlugins` in settings.json without `/plugin install` | Plugin doesn't load | Must install via `/plugin install`, not just enable in settings |
+| Marketplace and plugin have the same name | Skills appear both namespaced and non-namespaced | Use different names (e.g., marketplace `coding-clippy`, plugin `clippy`) |
+| `old-skills/` or archive dirs with SKILL.md in repo | Stale skills appear as non-namespaced | Delete or rename SKILL.md files outside `plugin/`; they get cloned into marketplace cache |
