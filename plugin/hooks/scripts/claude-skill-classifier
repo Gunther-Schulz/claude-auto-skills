@@ -145,16 +145,16 @@ if config["CLASSIFIER_MAX_BUDGET"]:
 _CATEGORIES = """CATEGORIES (output the line after the arrow if the category matches):
 
 - code-quality: User is asking to WRITE, EDIT, CREATE, or IMPLEMENT code — new features, bug fixes, refactoring, file creation. Confirming a proposal to implement counts. Also matches DESIGN CONSTRAINTS or CORRECTIONS directed at code being written: "make it configurable", "extract that into a function", "handle the error case", "add validation", "use the existing helper instead".
-  → Run /code-quality before writing code.
+  → Run /auto-skills:code-quality before writing code.
 
 - critical-thinking: User is asking to INVESTIGATE, DEBUG, TRACE, or ANALYZE something — find a bug, understand behavior, research a question, explain code.
-  → Run /critical-thinking before proceeding.
+  → Run /auto-skills:critical-thinking before proceeding.
 
 - critical-evaluation: User is asking to EVALUATE, COMPARE, CHOOSE, or DECIDE between options, or asking for an opinion on a design, approach, or tradeoff. Includes "should we use X or Y?", "is X the right choice?", "what do you think about X?".
-  → Run /critical-evaluation before responding.
+  → Run /auto-skills:critical-evaluation before responding.
 
 - skill-design: User is asking to WRITE, UPDATE, DESIGN, or REVIEW a skill, rule, checklist, or prompt template. Includes creating new skills, modifying existing skill files, or discussing how skills should work.
-  → Run /skill-design before writing or modifying skills."""
+  → Run /auto-skills:skill-design before writing or modifying skills."""
 
 _low_keywords = config["CLASSIFIER_LOW_KEYWORDS"]
 _DO_NOT_MATCH_STRICT = f"""DO NOT MATCH (output nothing for these):
@@ -235,16 +235,16 @@ except (json.JSONDecodeError, ValueError) as e:
 
 # Filter: only allow expected lines
 VALID = {
-    "Run /code-quality before writing code.",
-    "Run /critical-thinking before proceeding.",
-    "Run /critical-evaluation before responding.",
-    "Run /skill-design before writing or modifying skills.",
+    "Run /auto-skills:code-quality before writing code.",
+    "Run /auto-skills:critical-thinking before proceeding.",
+    "Run /auto-skills:critical-evaluation before responding.",
+    "Run /auto-skills:skill-design before writing or modifying skills.",
 }
 CATEGORY_MAP = {
-    "code-quality": "Run /code-quality before writing code.",
-    "critical-thinking": "Run /critical-thinking before proceeding.",
-    "critical-evaluation": "Run /critical-evaluation before responding.",
-    "skill-design": "Run /skill-design before writing or modifying skills.",
+    "code-quality": "Run /auto-skills:code-quality before writing code.",
+    "critical-thinking": "Run /auto-skills:critical-thinking before proceeding.",
+    "critical-evaluation": "Run /auto-skills:critical-evaluation before responding.",
+    "skill-design": "Run /auto-skills:skill-design before writing or modifying skills.",
 }
 
 filtered = []

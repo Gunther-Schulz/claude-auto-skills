@@ -54,7 +54,7 @@ if command -v jq &>/dev/null; then
         ]
       else . end |
       del(.extraKnownMarketplaces["local"]) |
-      del(.enabledPlugins["claude-auto-skills@local"])
+      del(.enabledPlugins["auto-skills@local"])
     ' "$SETTINGS" > "${SETTINGS}.tmp" && mv "${SETTINGS}.tmp" "$SETTINGS"
     echo -e "  ${GREEN}cleaned${NC}    old hook/plugin entries from settings.json"
 fi
@@ -73,6 +73,6 @@ echo ""
 echo "Now run these commands inside Claude Code:"
 echo ""
 echo "  /plugin marketplace add Gunther-Schulz/claude-auto-skills"
-echo "  /plugin install claude-auto-skills@local"
+echo "  /plugin install auto-skills@local"
 echo ""
 echo "Then restart Claude Code or run /reload-plugins."

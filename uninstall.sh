@@ -12,7 +12,7 @@ echo ""
 # Clean up any leftover settings.json entries from older install methods
 if command -v jq &>/dev/null && [ -f "$SETTINGS" ]; then
     jq '
-      del(.enabledPlugins["claude-auto-skills@local"]) |
+      del(.enabledPlugins["auto-skills@local"]) |
       del(.extraKnownMarketplaces["local"])
     ' "$SETTINGS" > "${SETTINGS}.tmp" && mv "${SETTINGS}.tmp" "$SETTINGS"
     echo -e "  ${GREEN}cleaned${NC}  legacy entries from settings.json"
@@ -21,7 +21,7 @@ fi
 echo ""
 echo "Now run these commands inside Claude Code:"
 echo ""
-echo "  /plugin uninstall claude-auto-skills@local"
+echo "  /plugin uninstall auto-skills@local"
 echo "  /plugin marketplace remove local"
 echo ""
 echo "Config and logs are NOT removed. To clean up:"
