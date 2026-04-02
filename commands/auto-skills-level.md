@@ -1,4 +1,4 @@
-Set the auto-skills classifier sensitivity level. $ARGUMENTS
+Set the auto-skills classifier sensitivity level.
 
 Valid levels: low, normal, high
 
@@ -9,6 +9,8 @@ Valid levels: low, normal, high
 Update CLASSIFIER_SENSITIVITY in ~/.config/claude-auto-skills/config.sh.
 If the variable doesn't exist, append it. Use sed to update in place.
 
-If no level is provided in arguments, show the current level and list the options.
+Set the level to: $ARGUMENTS
+
+If no level is provided, show the current level and list the options.
 
 After setting, report the new level.
