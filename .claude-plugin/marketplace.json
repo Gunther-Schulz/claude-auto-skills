@@ -1,0 +1,10 @@
+{
+  "name": "local",
+  "plugins": [
+    {
+      "name": "claude-auto-skills",
+      "description": "Automatic skill injection via Haiku classifier hook. Injects code-quality, critical-thinking, critical-evaluation, and skill-design checklists based on the user's prompt.",
+      "source": "./"
+    }
+  ]
+}
