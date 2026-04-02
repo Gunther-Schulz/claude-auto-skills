@@ -68,10 +68,31 @@ else
     echo -e "  ${YELLOW}kept${NC}       ${CONFIGDIR}/config.sh (already exists)"
 fi
 
-echo ""
-echo "Now run these commands inside Claude Code:"
-echo ""
-echo "  /plugin marketplace add Gunther-Schulz/claude-auto-skills"
-echo "  /plugin install auto-skills@local"
-echo ""
-echo "Then restart Claude Code or run /reload-plugins."
+# Install plugin via CLI
+if command -v claude &>/dev/null; then
+    if ! claude plugin marketplace list 2>/dev/null | grep -q '"local"'; then
+        claude plugin marketplace add Gunther-Schulz/claude-auto-skills
+        echo -e "  ${GREEN}added${NC}      marketplace 'local'"
+    else
+        claude plugin marketplace update local 2>/dev/null
+        echo -e "  ${GREEN}updated${NC}    marketplace 'local'"
+    fi
+
+    if claude plugin list 2>/dev/null | grep -q 'auto-skills@local'; then
+        claude plugin update auto-skills@local 2>/dev/null
+        echo -e "  ${GREEN}updated${NC}    auto-skills@local"
+    else
+        claude plugin install auto-skills@local
+        echo -e "  ${GREEN}installed${NC}  auto-skills@local"
+    fi
+    echo ""
+    echo "Restart Claude Code or run /reload-plugins to activate."
+else
+    echo ""
+    echo "Claude CLI not found. Run these commands inside Claude Code:"
+    echo ""
+    echo "  /plugin marketplace add Gunther-Schulz/claude-auto-skills"
+    echo "  /plugin install auto-skills@local"
+    echo ""
+    echo "Then restart Claude Code or run /reload-plugins."
+fi
